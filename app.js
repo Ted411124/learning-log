@@ -15,6 +15,7 @@
   const saveButton = document.querySelector('#save-button');
   const recordsList = document.querySelector('#records-list');
   const recordsStatus = document.querySelector('#records-status');
+  const weeklySummary = document.querySelector('#weekly-summary');
   const recordCount = document.querySelector('#record-count');
   const userEmail = document.querySelector('#user-email');
   let supabaseClient;
@@ -57,13 +58,13 @@
     } else {
       recordsList.replaceChildren();
       recordCount.textContent = '0 筆';
+      weeklySummary.textContent = '最近 7 天共學習 0 分鐘，記錄 0 筆';
     }
   }
 
-  function localDateString() {
-    const now = new Date();
-    const offset = now.getTimezoneOffset() * 60000;
-    return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+  function localDateString(date = new Date()) {
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 10);
   }
 
   function formatDate(dateString) {
@@ -128,8 +129,18 @@
     if (error) {
       recordsStatus.hidden = false;
       recordsStatus.textContent = `無法載入紀錄：${error.message}`;
+      weeklySummary.textContent = '最近 7 天統計暫時無法載入';
       return;
     }
+
+    const today = new Date();
+    const firstDay = new Date(today);
+    firstDay.setDate(firstDay.getDate() - 6);
+    const firstDate = localDateString(firstDay);
+    const lastDate = localDateString(today);
+    const recentRecords = data.filter((record) => record.log_date >= firstDate && record.log_date <= lastDate);
+    const recentMinutes = recentRecords.reduce((total, record) => total + (Number(record.minutes) || 0), 0);
+    weeklySummary.textContent = `最近 7 天共學習 ${recentMinutes} 分鐘，記錄 ${recentRecords.length} 筆`;
 
     recordCount.textContent = `${data.length} 筆`;
     recordsStatus.hidden = data.length > 0;
